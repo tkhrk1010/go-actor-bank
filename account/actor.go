@@ -13,9 +13,9 @@ type AccountActor struct {
 	approval *actor.PID
 }
 
-func NewAccountActor(approval *actor.PID) *AccountActor {
+func NewAccountActor(balance float64, approval *actor.PID) *AccountActor {
 	return &AccountActor{
-		balance: 1000, // 初期残高は1000円
+		balance: balance,
 		approval: approval,
 	}
 }
@@ -23,6 +23,7 @@ func NewAccountActor(approval *actor.PID) *AccountActor {
 type WithdrawRequest struct {
 	Amount float64
 	Sender *actor.PID
+	UserID  string
 }
 
 type WithdrawResponse struct {
@@ -32,8 +33,8 @@ type WithdrawResponse struct {
 func (a *AccountActor) Receive(context actor.Context) {
     switch msg := context.Message().(type) {
     case *WithdrawRequest:
-				log.Printf("Account balance = %.2f", a.balance)
-        log.Printf("Received withdrawal request: Amount = %.2f", msg.Amount)
+				// log.Printf("Account balance = %.2f", a.balance)
+        // log.Printf("Received withdrawal request: Amount = %.2f", msg.Amount)
 
 				// 送信元のAccountActorのPIDを設定
 				msg.Sender = context.Self()
@@ -42,7 +43,7 @@ func (a *AccountActor) Receive(context actor.Context) {
         if err != nil {
             context.Respond(&WithdrawResponse{Approved: false})
 
-            log.Println("Withdrawal request timeout or error:", err)
+						log.Printf("user: %v denied due to timeout or error: %v", msg.UserID, err)
             return
         }
 
@@ -54,16 +55,16 @@ func (a *AccountActor) Receive(context actor.Context) {
                     a.balance -= msg.Amount
                     context.Respond(&WithdrawResponse{Approved: true})
 
-                    log.Println("Withdrawal request approved")
+                    // log.Println("Withdrawal request approved")
                 } else {
                     context.Respond(&WithdrawResponse{Approved: false})
 
-                    log.Println("Withdrawal request denied due to insufficient balance")
+										log.Printf("user: %v failed due to insufficient balance", msg.UserID)
                 }
             } else {
                 context.Respond(&WithdrawResponse{Approved: false})
 
-                log.Println("Withdrawal request denied by approval actor")
+								log.Printf("user: %v denied approval", msg.UserID)
             }
         }
     }
